@@ -1,0 +1,1430 @@
+let agents=[];
+let current=0;
+let timerStarted=false;
+let timerInterval;
+let phase="reveal";
+let voteIndex=0;
+
+const isGame=location.pathname.includes("game");
+
+const locations={
+ "Kashmir":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Amritsar":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Delhi":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Jaipur":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Varanasi":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+"Mumbai":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Goa":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"Bengaluru":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Kerala":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+"Hyderabad":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Kolkata":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+"Puri":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Chennai":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Madurai":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+"Assam":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+"Nagpur":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Rajasthan":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Patna":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Indore":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"Shillong":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Agra":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Lucknow":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+"Udaipur":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+"Bhopal":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Surat":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Ahmedabad":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+"Rajkot":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+"Coimbatore":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+"Vizag":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+"Ranchi":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+"Raipur":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Guwahati":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+"Imphal":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+"Aizawl":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Gangtok":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Darjeeling":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Dhanbad":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Jamshedpur":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Chandigarh":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Shimla":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+"Manali":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Leh":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+};
+
+function randomIndexes(n,c){
+ let s=new Set();
+ while(s.size<c)s.add(Math.floor(Math.random()*n));
+ return [...s];
+}
+
+/* ================= LOBBY ================= */
+
+if(!isGame){
+
+const agentInput=document.getElementById("agentInput");
+const agentList=document.getElementById("agentList");
+const spySelect=document.getElementById("spySelect");
+const timeSelect=document.getElementById("timeSelect");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+
+window.closePopup=()=>popup.style.display="none";
+
+window.addAgent=()=>{
+ let n=agentInput.value.trim();
+ if(!n)return;
+
+ if(agents.some(a=>a.name.toLowerCase()===n.toLowerCase())){
+ popupText.innerText="AGENT ALREADY EXISTS";
+ popup.style.display="flex";
+ return;
+ }
+
+ agents.push({name:n});
+ agentInput.value="";
+ render();
+};
+
+window.removeAgent=i=>{
+ agents.splice(i,1);
+ render();
+};
+
+function render(){
+ agentList.innerHTML="";
+ agents.forEach((a,i)=>{
+ agentList.innerHTML+=`
+ <li>${a.name}
+ <button class="remove" onclick="removeAgent(${i})">-</button>
+ </li>`;
+ });
+}
+
+window.startMission=()=>{
+
+ if(agents.length<3){
+ popupText.innerText="MINIMUM 3 AGENTS";
+ popup.style.display="flex";
+ return;
+ }
+
+ localStorage.setItem("session",JSON.stringify({
+ players:agents,
+ spyCount:+spySelect.value,
+ time:+timeSelect.value
+ }));
+
+ newRound();
+};
+
+function newRound(){
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(s.players.length,s.spyCount);
+
+ let round=s.players.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ localStorage.setItem("roundTime",s.time);
+
+ location="game.html";
+}
+}
+
+/* ================= GAME ================= */
+
+if(isGame){
+
+const accuseArea=document.getElementById("accuseArea");
+const startVoteBtn=document.getElementById("startVoteBtn");
+const startTimerBtn=document.getElementById("startTimerBtn");
+const nextBtn=document.getElementById("nextBtn");
+const timer=document.getElementById("timer");
+const turn=document.getElementById("turn");
+const hold=document.getElementById("hold");
+const card=document.getElementById("card");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+const popupBox=document.getElementById("popupBox");
+const playAgain=document.getElementById("playAgain");
+
+agents=JSON.parse(localStorage.getItem("roundAgents"));
+
+accuseArea.style.display="none";
+startVoteBtn.style.display="none";
+playAgain.style.display="none";
+localStorage.removeItem("votes");
+
+/* ---- DISCUSSION HINT ---- */
+
+const discussionHint=document.createElement("div");
+discussionHint.className="theme";
+discussionHint.style.marginTop="8px";
+discussionHint.style.textAlign="center";
+discussionHint.style.display="none";
+discussionHint.innerText="Discuss freely. Ask questions. Find the Spy. Then vote anonymously.";
+timer.after(discussionHint);
+
+showTurn();
+
+/* ---- REVEAL ---- */
+
+function reveal(){
+ if(phase!=="reveal") return;
+ let a=agents[current];
+ card.innerHTML=a.spy?"<div class='spy'>YOU ARE THE SPY</div>":`${a.location}<br>${a.role}`;
+ card.style.display="block";
+}
+
+function hideReveal(){
+ if(phase!=="reveal") return;
+ card.style.display="none";
+
+ if(current===agents.length-1){
+ startTimerBtn.style.display="block";
+ turn.innerText="ALL ROLES DISTRIBUTED";
+ }else nextBtn.style.display="block";
+}
+
+hold.onmousedown=reveal;
+hold.onmouseup=hideReveal;
+
+hold.addEventListener("touchstart",e=>{e.preventDefault();reveal();});
+hold.addEventListener("touchend",e=>{e.preventDefault();hideReveal();});
+
+nextBtn.onclick=()=>{
+ current++;
+ nextBtn.style.display="none";
+ showTurn();
+};
+
+function showTurn(){
+ turn.innerHTML=`PASS PHONE TO ${agents[current].name.toUpperCase()}`;
+}
+
+/* ---- TIMER ---- */
+
+startTimerBtn.onclick=startTimer;
+startVoteBtn.onclick=beginVoting;
+
+function startTimer(){
+
+ if(timerStarted)return;
+
+ timerStarted=true;
+ phase="timer";
+
+ startTimerBtn.style.display="none";
+ startVoteBtn.style.display="block";
+ startVoteBtn.innerText=`START VOTING -- ( ${agents[0].name.toUpperCase()} goes first)`;
+
+ discussionHint.style.display="block";
+
+ let t=+localStorage.getItem("roundTime");
+
+ timerInterval=setInterval(()=>{
+ timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+ if(t<=0) clearInterval(timerInterval);
+ t--;
+ },1000);
+}
+
+/* ---- VOTING ---- */
+
+function beginVoting(){
+
+ if(phase==="voting")return;
+ clearInterval(timerInterval);
+ phase="voting";
+
+ discussionHint.style.display="none";
+
+ voteIndex=0;
+ localStorage.setItem("votes",JSON.stringify([]));
+
+ accuseArea.style.display="block";
+ startVoteBtn.style.display="none";
+
+ showVote();
+}
+
+function showVote(){
+
+ accuseArea.innerHTML=`<h3>${agents[voteIndex].name.toUpperCase()} CAST YOUR VOTE</h3>`;
+
+ agents.forEach((a,i)=>{
+ accuseArea.innerHTML+=`
+ <div class="voteRow">
+ <span>${a.name}</span>
+ <button class="accuse" onclick="castVote(${i})">VOTE</button>
+ </div>`;
+ });
+}
+
+window.castVote=i=>{
+
+ let v=JSON.parse(localStorage.getItem("votes"));
+ v.push(i);
+ localStorage.setItem("votes",JSON.stringify(v));
+
+ let last = voteIndex === agents.length-1;
+
+ accuseArea.innerHTML=`
+ <button class="start" onclick="nextVote()">${last?"SEE RESULT":"PASS PHONE TO "+agents[voteIndex+1].name.toUpperCase()}</button>
+ `;
+};
+
+window.nextVote=()=>{
+ voteIndex++;
+ if(voteIndex>=agents.length) finalize();
+ else showVote();
+};
+
+/* ---- RESULT ---- */
+
+function finalize(){
+
+ let votes=JSON.parse(localStorage.getItem("votes"));
+ let tally={};
+
+ votes.forEach(v=>tally[v]=(tally[v]||0)+1);
+
+ let max=0,acc=null,tie=false;
+
+ Object.keys(tally).forEach(k=>{
+ if(tally[k]>max){max=tally[k];acc=k;tie=false;}
+ else if(tally[k]==max) tie=true;
+ });
+
+ popupBox.classList.remove("spyTheme","memberTheme");
+
+ if(tie || !agents[acc].spy){
+ popupBox.classList.add("spyTheme");
+ popupText.innerText="SPY WINS!";
+ }else{
+ popupBox.classList.add("memberTheme");
+ popupText.innerText="MEMBERS WIN!";
+ }
+
+ popup.style.display="flex";
+ playAgain.style.display="block";
+}
+
+/* PLAY AGAIN */
+
+playAgain.onclick=()=>{
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(agents.length,s.spyCount);
+
+ let round=agents.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ location="game.html";
+};
+
+document.getElementById("endGame").onclick=()=>location="index.html";
+document.getElementById("closePopup").onclick=()=>popup.style.display="none";
+
+}
+
+
+
+
+new code
+
+let agents = [];
+let current = 0;
+let timerStarted = false;
+let timerInterval;
+let phase = "reveal";
+let voteIndex = 0;
+
+let holdTimeout = null;
+let holdCountdown = null;
+let holdSeconds = 10;
+
+const isGame = location.pathname.includes("game");
+
+/* ================= LOCATIONS ================= */
+
+const locations = {
+  "Kashmir":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+  "Amritsar":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+  "Delhi":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+  "Jaipur":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+  "Varanasi":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+  "Mumbai":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+  "Goa":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+  "Bengaluru":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+  "Kerala":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+  "Hyderabad":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+  "Kolkata":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+  "Puri":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+  "Chennai":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+  "Madurai":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+  "Assam":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+  "Nagpur":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+  "Rajasthan":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+  "Patna":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+  "Indore":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+  "Shillong":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+  "Agra":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+  "Lucknow":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+  "Udaipur":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+  "Bhopal":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+  "Surat":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+  "Ahmedabad":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+  "Rajkot":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+  "Coimbatore":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+  "Vizag":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+  "Ranchi":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+  "Raipur":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+  "Guwahati":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+  "Imphal":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+  "Aizawl":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+  "Gangtok":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+  "Darjeeling":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+  "Dhanbad":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+  "Jamshedpur":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+  "Chandigarh":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+  "Shimla":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+  "Manali":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+  "Leh":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+  "Jodhpur":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+};
+
+function randomIndexes(n, c) {
+  let s = new Set();
+  while (s.size < c) s.add(Math.floor(Math.random() * n));
+  return [...s];
+}
+
+/* ================= GAME ================= */
+
+if (isGame) {
+
+  const accuseArea = document.getElementById("accuseArea");
+  const startVoteBtn = document.getElementById("startVoteBtn");
+  const startTimerBtn = document.getElementById("startTimerBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const timer = document.getElementById("timer");
+  const turn = document.getElementById("turn");
+  const hold = document.getElementById("hold");
+  const card = document.getElementById("card");
+  const popup = document.getElementById("popup");
+  const popupText = document.getElementById("popupText");
+  const popupBox = document.getElementById("popupBox");
+  const playAgain = document.getElementById("playAgain");
+
+  agents = JSON.parse(localStorage.getItem("roundAgents"));
+
+  accuseArea.style.display = "none";
+  startVoteBtn.style.display = "none";
+  playAgain.style.display = "none";
+  localStorage.removeItem("votes");
+
+  const discussionHint = document.createElement("div");
+  discussionHint.className = "theme";
+  discussionHint.style.marginTop = "8px";
+  discussionHint.style.textAlign = "center";
+  discussionHint.style.display = "none";
+  discussionHint.innerText = "Discuss freely. Ask questions. Find the Spy. Then vote anonymously.";
+  timer.after(discussionHint);
+
+  showTurn();
+
+/* ---- REVEAL ---- */
+
+function reveal() {
+
+  if (phase !== "reveal") return;
+
+  let remaining = holdSeconds;
+
+  card.innerHTML = `HOLD... ${remaining}`;
+  card.style.display = "block";
+
+  holdCountdown = setInterval(() => {
+    remaining--;
+    card.innerHTML = `HOLD... ${remaining}`;
+  }, 1000);
+
+  holdTimeout = setTimeout(() => {
+
+    clearInterval(holdCountdown);
+
+    let a = agents[current];
+
+    card.innerHTML = a.spy
+      ? "<div class='spy'>YOU ARE THE SPY</div>"
+      : `${a.location}<br>${a.role}`;
+
+  }, holdSeconds * 1000);
+}
+
+function hideReveal() {
+
+  if (phase !== "reveal") return;
+
+  clearTimeout(holdTimeout);
+  clearInterval(holdCountdown);
+
+  card.style.display = "none";
+
+  if (current === agents.length - 1) {
+    startTimerBtn.style.display = "block";
+    turn.innerText = "ALL ROLES DISTRIBUTED";
+  } else {
+    nextBtn.style.display = "block";
+  }
+}
+
+hold.onmousedown = reveal;
+hold.onmouseup = hideReveal;
+
+hold.addEventListener("touchstart", e => { e.preventDefault(); reveal(); });
+hold.addEventListener("touchend", e => { e.preventDefault(); hideReveal(); });
+
+nextBtn.onclick = () => {
+  current++;
+  nextBtn.style.display = "none";
+  showTurn();
+};
+
+function showTurn() {
+  turn.innerHTML = `PASS PHONE TO ${agents[current].name.toUpperCase()}`;
+}
+
+/* ---- TIMER ---- */
+
+startTimerBtn.onclick = startTimer;
+startVoteBtn.onclick = beginVoting;
+
+function startTimer() {
+
+  if (timerStarted) return;
+
+  timerStarted = true;
+  phase = "timer";
+
+  startTimerBtn.style.display = "none";
+  startVoteBtn.style.display = "block";
+  startVoteBtn.innerText = `START VOTING -- ( ${agents[0].name.toUpperCase()} goes first)`;
+
+  discussionHint.style.display = "block";
+
+  let t = +localStorage.getItem("roundTime");
+
+  timerInterval = setInterval(() => {
+    timer.innerText = Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0");
+    if (t <= 0) clearInterval(timerInterval);
+    t--;
+  }, 1000);
+}
+
+/* ---- VOTING ---- */
+
+function beginVoting() {
+
+  if (phase === "voting") return;
+
+  clearInterval(timerInterval);
+  phase = "voting";
+
+  discussionHint.style.display = "none";
+
+  voteIndex = 0;
+  localStorage.setItem("votes", JSON.stringify([]));
+
+  accuseArea.style.display = "block";
+  startVoteBtn.style.display = "none";
+
+  showVote();
+}
+
+function showVote() {
+
+  accuseArea.innerHTML = `<h3>${agents[voteIndex].name.toUpperCase()} CAST YOUR VOTE</h3>`;
+
+  agents.forEach((a, i) => {
+    accuseArea.innerHTML += `
+      <div class="voteRow">
+        <span>${a.name}</span>
+        <button class="accuse" onclick="castVote(${i})">VOTE</button>
+      </div>`;
+  });
+}
+
+window.castVote = i => {
+
+  let v = JSON.parse(localStorage.getItem("votes"));
+  v.push(i);
+  localStorage.setItem("votes", JSON.stringify(v));
+
+  let last = voteIndex === agents.length - 1;
+
+  accuseArea.innerHTML = `
+    <button class="start" onclick="nextVote()">
+      ${last ? "SEE RESULT" : "PASS PHONE TO " + agents[voteIndex + 1].name.toUpperCase()}
+    </button>`;
+};
+
+window.nextVote = () => {
+  voteIndex++;
+  if (voteIndex >= agents.length) finalize();
+  else showVote();
+};
+
+/* ---- RESULT ---- */
+
+function finalize() {
+
+  let votes = JSON.parse(localStorage.getItem("votes"));
+  let tally = {};
+
+  votes.forEach(v => tally[v] = (tally[v] || 0) + 1);
+
+  let max = 0, acc = null, tie = false;
+
+  Object.keys(tally).forEach(k => {
+    if (tally[k] > max) { max = tally[k]; acc = k; tie = false; }
+    else if (tally[k] === max) tie = true;
+  });
+
+  popupBox.classList.remove("spyTheme", "memberTheme");
+
+  if (tie || !agents[acc].spy) {
+    popupBox.classList.add("spyTheme");
+    popupText.innerText = "SPY WINS!";
+  } else {
+    popupBox.classList.add("memberTheme");
+    popupText.innerText = "MEMBERS WIN!";
+  }
+
+  popup.style.display = "flex";
+  playAgain.style.display = "block";
+}
+
+/* PLAY AGAIN */
+
+playAgain.onclick = () => {
+
+  let s = JSON.parse(localStorage.getItem("session"));
+  let locNames = Object.keys(locations);
+  let loc = locNames[Math.floor(Math.random() * locNames.length)];
+  let roles = [...locations[loc]];
+  let spies = randomIndexes(agents.length, s.spyCount);
+
+  let round = agents.map((p, i) => ({
+    name: p.name,
+    spy: spies.includes(i),
+    role: spies.includes(i) ? null : roles.pop(),
+    location: loc
+  }));
+
+  localStorage.setItem("roundAgents", JSON.stringify(round));
+  location = "game.html";
+};
+
+document.getElementById("endGame").onclick = () => location = "index.html";
+document.getElementById("closePopup").onclick = () => popup.style.display = "none";
+
+}
+
+
+
+
+
+
+style
+
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+}
+
+body{
+background:
+radial-gradient(circle at top,#071a2a,#020617 60%),
+linear-gradient(180deg,#020617,#01030a);
+color:#e5e7eb;
+min-height:100vh;
+}
+
+/* CORE LAYOUT */
+
+.center{
+display:flex;
+flex-direction:column;
+align-items:center;
+padding:22px;
+max-width:430px;
+margin:auto;
+}
+
+/* TITLES */
+
+h1,h2{
+color:#6ee7b7;
+letter-spacing:3px;
+text-align:center;
+text-shadow:0 0 25px rgba(110,231,183,.5);
+margin:16px 0;
+}
+
+h1{font-size:28px;}
+h2{font-size:20px;}
+
+/* INPUTS / DROPDOWNS */
+
+input,select{
+width:100%;
+background:linear-gradient(180deg,#061322,#020b1a);
+border:1px solid #1f2933;
+padding:15px 16px;
+border-radius:18px;
+color:#e5e7eb;
+margin-bottom:12px;
+outline:none;
+appearance:none;
+box-shadow:
+inset 0 0 20px rgba(0,0,0,.7),
+0 10px 25px rgba(0,0,0,.5);
+}
+
+select option{
+background:#020b1a;
+color:#6ee7b7;
+}
+
+input::placeholder{color:#6b7280;}
+
+/* BUTTONS */
+
+button{
+border:none;
+border-radius:20px;
+padding:14px;
+font-weight:700;
+cursor:pointer;
+margin-top:10px;
+transition:.25s ease;
+}
+
+/* PRIMARY */
+
+.start{
+background:linear-gradient(135deg,#6ee7b7,#4ade80);
+color:#02150d;
+width:100%;
+font-size:16px;
+letter-spacing:1px;
+box-shadow:0 0 30px rgba(110,231,183,.45);
+}
+
+.start:active{transform:scale(.96);}
+
+/* ABORT */
+
+.abort{
+background:linear-gradient(135deg,#7f1d1d,#3f0d0d);
+color:#fecaca;
+width:100%;
+box-shadow:0 0 25px rgba(239,68,68,.45);
+}
+
+/* AGENT LIST */
+
+#agentList{
+width:100%;
+margin-top:10px;
+}
+
+#agentList li{
+background:linear-gradient(180deg,#061322,#020b1a);
+padding:14px;
+margin-bottom:10px;
+border-radius:18px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+border:1px solid #1f2933;
+box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+
+/* REMOVE */
+
+.remove{
+background:#3f0d0d;
+color:#fecaca;
+padding:6px 14px;
+border-radius:12px;
+opacity:.8;
+}
+
+/* HOLD REVEAL */
+
+#hold{
+width:220px;
+height:220px;
+border-radius:50%;
+border:2px solid #6ee7b7;
+display:flex;
+align-items:center;
+justify-content:center;
+margin:26px auto;
+color:#6ee7b7;
+font-weight:700;
+letter-spacing:2px;
+text-align:center;
+box-shadow:
+0 0 45px rgba(110,231,183,.45),
+inset 0 0 30px rgba(110,231,183,.15);
+}
+
+/* TURN */
+
+#turn{
+margin-top:10px;
+font-weight:700;
+letter-spacing:2px;
+color:#6ee7b7;
+text-align:center;
+}
+
+/* CARD */
+
+#card{
+margin:18px;
+text-align:center;
+font-size:22px;
+color:#6ee7b7;
+letter-spacing:1px;
+}
+
+/* SPY */
+
+.spy{
+color:#ef4444;
+font-weight:900;
+letter-spacing:2px;
+text-shadow:0 0 25px rgba(239,68,68,.6);
+}
+
+/* TIMER */
+
+#timer{
+font-size:46px;
+color:#6ee7b7;
+margin:10px;
+text-shadow:0 0 30px rgba(110,231,183,.6);
+}
+
+/* NEXT / TIMER */
+
+#nextBtn,#startTimerBtn{
+width:100%;
+background:linear-gradient(135deg,#6ee7b7,#4ade80);
+color:black;
+display:none;
+border-radius:20px;
+}
+
+/* DISCUSSION TEXT */
+
+.theme,.pass{
+color:#6ee7b7;
+font-weight:800;
+text-align:center;
+letter-spacing:1px;
+margin-top:6px;
+}
+
+/* VOTING AREA */
+
+#accuseArea{
+width:100%;
+margin-top:20px;
+display:flex;
+flex-direction:column;
+gap:12px;
+}
+
+/* CENTER CAST YOUR VOTE */
+
+#accuseArea h3{
+text-align:center;
+color:#6ee7b7;
+letter-spacing:2px;
+margin-bottom:8px;
+}
+
+/* VOTE ROW */
+
+.voteRow{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:linear-gradient(180deg,#061322,#020b1a);
+padding:14px;
+border-radius:18px;
+color:#6ee7b7;
+border:1px solid #1f2933;
+box-shadow:0 8px 25px rgba(0,0,0,.6);
+}
+
+/* VOTE BUTTON */
+
+.accuse{
+background:linear-gradient(135deg,#7f1d1d,#3f0d0d);
+color:white;
+padding:8px 18px;
+border-radius:14px;
+box-shadow:0 0 15px rgba(239,68,68,.5);
+}
+
+/* POPUP */
+
+.popup{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.85);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:100;
+}
+
+/* POPUP BOX */
+
+.popupBox{
+background:linear-gradient(180deg,#061322,#020b1a);
+padding:30px;
+border-radius:26px;
+text-align:center;
+width:85%;
+box-shadow:0 0 60px rgba(0,0,0,.8);
+}
+
+/* MEMBER WIN */
+
+.memberTheme{
+border:2px solid #6ee7b7;
+box-shadow:0 0 40px rgba(110,231,183,.6);
+}
+
+/* SPY WIN */
+
+.spyTheme{
+border:2px solid #ef4444;
+box-shadow:0 0 40px rgba(239,68,68,.7);
+}
+
+.spyTheme .start{
+background:#7f1d1d;
+color:white;
+box-shadow:0 0 25px rgba(239,68,68,.6);
+}
+/* ---- VISUAL HIERARCHY FIX ---- */
+
+/* Headline softer */
+#turn{
+color:#9ca3af;
+letter-spacing:2px;
+margin-bottom:14px;
+}
+
+/* HOLD CIRCLE – keep glow but soften text */
+#hold{
+color:#6ee7b7;
+font-size:14px;
+letter-spacing:3px;
+}
+
+/* TIMER stays hero */
+#timer{
+color:#6ee7b7;
+font-weight:800;
+margin-top:10px;
+margin-bottom:14px;
+}
+
+/* DISCUSSION TEXT → subtle helper */
+.theme{
+color:#9ca3af !important;
+font-weight:500;
+font-size:13px;
+max-width:320px;
+line-height:1.4;
+margin:14px auto 24px auto;
+}
+
+/* Start voting spacing */
+#startVoteBtn{
+margin-top:10px;
+}
+
+/* Reduce green saturation on headers */
+h1,h2{
+color:#9fe4c7;
+text-shadow:none;
+}
+
+/* END GAME less aggressive */
+.abort{
+opacity:.75;
+}
+
+/* Reduce crowding */
+.center > *{
+margin-bottom:8px;
+}
+
+/* Make primary button dominant */
+.start{
+font-size:17px;
+letter-spacing:1px;
+}
+
+/* Remove glow from non-primary */
+#nextBtn,#startTimerBtn{
+box-shadow:none;
+}
+
+/* Voting title centered and calm */
+#accuseArea h3{
+font-size:15px;
+letter-spacing:2px;
+color:#77ae97;
+margin-bottom:14px;
+}
+
+/* HOLD area spacing */
+#hold{
+margin:34px auto;
+}
+/* DISABLED OPTION / SPY LOCK */
+
+select:disabled,
+option:disabled{
+  background:#020b1a !important;
+  color:#6b7280 !important;
+  opacity:.5;
+}
+
+.spyDisabled{
+  pointer-events:none;
+  opacity:.4;
+}
+
+/* MOBILE */
+
+@media(max-height:700px){
+#hold{width:180px;height:180px;}
+}
+
+
+
+final script
+
+
+
+let agents=[];
+let current=0;
+let timerStarted=false;
+let timerInterval;
+let phase="reveal";
+let voteIndex=0;
+let holdTimeout = null;
+let holdCountdown = null;
+let holdSeconds = 10;
+
+const isGame=location.pathname.includes("game");
+
+const locations={
+ "Kashmir":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Amritsar":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Delhi":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Jaipur":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Varanasi":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+"Mumbai":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Goa":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"Bengaluru":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Kerala":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+"Hyderabad":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Kolkata":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+"Puri":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Chennai":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Madurai":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+"Assam":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+"Nagpur":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Rajasthan":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Patna":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Indore":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"Shillong":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Agra":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Lucknow":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+"Udaipur":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+"Bhopal":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Surat":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Ahmedabad":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+"Rajkot":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+"Coimbatore":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+"Vizag":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+"Ranchi":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+"Raipur":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Guwahati":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+"Imphal":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+"Aizawl":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Gangtok":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Darjeeling":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Dhanbad":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Jamshedpur":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Chandigarh":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Shimla":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+"Manali":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Leh":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+};
+
+function randomIndexes(n,c){
+ let s=new Set();
+ while(s.size<c)s.add(Math.floor(Math.random()*n));
+ return [...s];
+}
+
+/* ================= LOBBY ================= */
+
+if(!isGame){
+
+const agentInput=document.getElementById("agentInput");
+const agentList=document.getElementById("agentList");
+const spySelect=document.getElementById("spySelect");
+const timeSelect=document.getElementById("timeSelect");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+
+window.closePopup=()=>popup.style.display="none";
+
+window.addAgent=()=>{
+ let n=agentInput.value.trim();
+ if(!n)return;
+
+ if(agents.some(a=>a.name.toLowerCase()===n.toLowerCase())){
+ popupText.innerText="AGENT ALREADY EXISTS";
+ popup.style.display="flex";
+ return;
+ }
+
+ agents.push({name:n});
+ agentInput.value="";
+ render();
+};
+
+window.removeAgent=i=>{
+ agents.splice(i,1);
+ render();
+};
+
+function render(){
+ agentList.innerHTML="";
+ agents.forEach((a,i)=>{
+ agentList.innerHTML+=`
+ <li>${a.name}
+ <button class="remove" onclick="removeAgent(${i})">-</button>
+ </li>`;
+ });
+}
+
+window.startMission=()=>{
+
+ if(agents.length<3){
+ popupText.innerText="MINIMUM 3 AGENTS";
+ popup.style.display="flex";
+ return;
+ }
+
+ localStorage.setItem("session",JSON.stringify({
+ players:agents,
+ spyCount:+spySelect.value,
+ time:+timeSelect.value
+ }));
+
+ newRound();
+};
+
+function newRound(){
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(s.players.length,s.spyCount);
+
+ let round=s.players.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ localStorage.setItem("roundTime",s.time);
+
+ location="game.html";
+}
+}
+
+/* ================= GAME ================= */
+
+if(isGame){
+
+const accuseArea=document.getElementById("accuseArea");
+const startVoteBtn=document.getElementById("startVoteBtn");
+const startTimerBtn=document.getElementById("startTimerBtn");
+const nextBtn=document.getElementById("nextBtn");
+const timer=document.getElementById("timer");
+const turn=document.getElementById("turn");
+const hold=document.getElementById("hold");
+const card=document.getElementById("card");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+const popupBox=document.getElementById("popupBox");
+const playAgain=document.getElementById("playAgain");
+
+agents=JSON.parse(localStorage.getItem("roundAgents"));
+
+accuseArea.style.display="none";
+startVoteBtn.style.display="none";
+playAgain.style.display="none";
+localStorage.removeItem("votes");
+
+/* ---- DISCUSSION HINT ---- */
+
+const discussionHint=document.createElement("div");
+discussionHint.className="theme";
+discussionHint.style.marginTop="8px";
+discussionHint.style.textAlign="center";
+discussionHint.style.display="none";
+discussionHint.innerText="Discuss freely. Ask questions. Find the Spy. Then vote anonymously.";
+timer.after(discussionHint);
+
+showTurn();
+
+/* ---- REVEAL ---- */
+
+function reveal(){
+
+ if(phase!=="reveal") return;
+
+ let remaining = holdSeconds;
+
+ card.innerHTML = `HOLD... ${remaining}`;
+ card.style.display="block";
+
+ holdCountdown = setInterval(()=>{
+   remaining--;
+   card.innerHTML = `HOLD... ${remaining}`;
+ },1000);
+
+ holdTimeout = setTimeout(()=>{
+
+   clearInterval(holdCountdown);
+
+   let a=agents[current];
+   card.innerHTML = a.spy
+     ? "<div class='spy'>YOU ARE THE SPY</div>"
+     : `${a.location}<br>${a.role}`;
+
+ }, holdSeconds * 1000);
+}
+
+function hideReveal(){
+
+ if(phase!=="reveal") return;
+
+ clearTimeout(holdTimeout);
+ clearInterval(holdCountdown);
+
+ card.style.display="none";
+
+ if(current===agents.length-1){
+   startTimerBtn.style.display="block";
+   turn.innerText="ALL ROLES DISTRIBUTED";
+ }else{
+   nextBtn.style.display="block";
+ }
+}
+
+
+hold.onmousedown=reveal;
+hold.onmouseup=hideReveal;
+
+hold.addEventListener("touchstart",e=>{e.preventDefault();reveal();});
+hold.addEventListener("touchend",e=>{e.preventDefault();hideReveal();});
+
+nextBtn.onclick=()=>{
+ current++;
+ nextBtn.style.display="none";
+ showTurn();
+};
+
+function showTurn(){
+ turn.innerHTML=`PASS PHONE TO ${agents[current].name.toUpperCase()}`;
+}
+
+/* ---- TIMER ---- */
+
+startTimerBtn.onclick=startTimer;
+startVoteBtn.onclick=beginVoting;
+
+function startTimer(){
+
+ if(timerStarted)return;
+
+ timerStarted=true;
+ phase="timer";
+
+ startTimerBtn.style.display="none";
+ startVoteBtn.style.display="block";
+ startVoteBtn.innerText=`START VOTING -- ( ${agents[0].name.toUpperCase()} goes first)`;
+
+ discussionHint.style.display="block";
+
+ let t=+localStorage.getItem("roundTime");
+
+ timerInterval=setInterval(()=>{
+ timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+ if(t<=0) clearInterval(timerInterval);
+ t--;
+ },1000);
+}
+
+/* ---- VOTING ---- */
+
+function beginVoting(){
+
+ if(phase==="voting")return;
+ clearInterval(timerInterval);
+ phase="voting";
+
+ discussionHint.style.display="none";
+
+ voteIndex=0;
+ localStorage.setItem("votes",JSON.stringify([]));
+
+ accuseArea.style.display="block";
+ startVoteBtn.style.display="none";
+
+ showVote();
+}
+
+function showVote(){
+
+ accuseArea.innerHTML=`<h3>${agents[voteIndex].name.toUpperCase()} CAST YOUR VOTE</h3>`;
+
+ agents.forEach((a,i)=>{
+ accuseArea.innerHTML+=`
+ <div class="voteRow">
+ <span>${a.name}</span>
+ <button class="accuse" onclick="castVote(${i})">VOTE</button>
+ </div>`;
+ });
+}
+
+window.castVote=i=>{
+
+ let v=JSON.parse(localStorage.getItem("votes"));
+ v.push(i);
+ localStorage.setItem("votes",JSON.stringify(v));
+
+ let last = voteIndex === agents.length-1;
+
+ accuseArea.innerHTML=`
+ <button class="start" onclick="nextVote()">${last?"SEE RESULT":"PASS PHONE TO "+agents[voteIndex+1].name.toUpperCase()}</button>
+ `;
+};
+
+window.nextVote=()=>{
+ voteIndex++;
+ if(voteIndex>=agents.length) finalize();
+ else showVote();
+};
+
+/* ---- RESULT ---- */
+
+function finalize(){
+
+ let votes=JSON.parse(localStorage.getItem("votes"));
+ let tally={};
+
+ votes.forEach(v=>tally[v]=(tally[v]||0)+1);
+
+ let max=0,acc=null,tie=false;
+
+ Object.keys(tally).forEach(k=>{
+ if(tally[k]>max){max=tally[k];acc=k;tie=false;}
+ else if(tally[k]==max) tie=true;
+ });
+
+ popupBox.classList.remove("spyTheme","memberTheme");
+
+ if(tie || !agents[acc].spy){
+ popupBox.classList.add("spyTheme");
+ popupText.innerText="SPY WINS!";
+ }else{
+ popupBox.classList.add("memberTheme");
+ popupText.innerText="MEMBERS WIN!";
+ }
+
+ popup.style.display="flex";
+ playAgain.style.display="block";
+}
+
+/* PLAY AGAIN */
+
+playAgain.onclick=()=>{
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(agents.length,s.spyCount);
+
+ let round=agents.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ location="game.html";
+};
+
+document.getElementById("endGame").onclick=()=>location="index.html";
+document.getElementById("closePopup").onclick=()=>popup.style.display="none";
+
+}

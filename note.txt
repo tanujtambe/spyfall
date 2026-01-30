@@ -1,0 +1,2079 @@
+let agents=[];
+let current=0;
+let timerStarted=false;
+let timerInterval;
+
+// ---------------- LOCATIONS ----------------
+const locations = {
+
+"Kashmir Houseboat":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Amritsar Golden Temple":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Delhi Street Market":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Jaipur Palace":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Varanasi Ghats":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+"Mumbai Local Train":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Goa Beach Shack":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"Bengaluru IT Park":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Kerala Backwaters":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+"Hyderabad Biryani Hotel":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Kolkata Tram":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+"Puri Jagannath Temple":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Chennai Marina Beach":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Madurai Temple":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+"Assam Tea Estate":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+"Nagpur Orange Market":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Rajasthan Desert Camp":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Patna Railway":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Indore Sarafa Bazaar":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"Shillong View Point":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Agra Taj Mahal":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Lucknow Imambara":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+"Udaipur City Palace":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+"Bhopal Lakefront":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Surat Textile Market":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Ahmedabad Sabarmati":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+"Rajkot Workshop":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+"Coimbatore Factory":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+"Vizag Shipyard":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+"Ranchi Waterfall":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+"Raipur Rice Mill":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Guwahati Ferry":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+"Imphal Handloom":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+"Aizawl Hill Cafe":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Gangtok Ropeway":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Darjeeling Toy Train":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Dhanbad Coal Mine":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Jamshedpur Steel Plant":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Chandigarh Sector Market":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Shimla Ridge":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+"Manali Snow Camp":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Leh Army Camp":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur Blue City":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+
+};
+
+
+// ---------------- HELPERS ----------------
+
+function randomIndexes(n,count){
+ let s=new Set();
+ while(s.size<count) s.add(Math.floor(Math.random()*n));
+ return [...s];
+}
+
+function showPopup(t){
+ popupText.innerText=t;
+ popup.style.display="flex";
+}
+
+function closePopup(){
+ popup.style.display="none";
+}
+
+// ---------------- LOBBY ----------------
+
+function addAgent(){
+ let n=document.getElementById("agentInput").value;
+ if(!n)return;
+ agents.push({name:n});
+ renderAgents();
+ document.getElementById("agentInput").value="";
+}
+
+function removeAgent(i){
+ agents.splice(i,1);
+ renderAgents();
+}
+
+function renderAgents(){
+ agentList.innerHTML="";
+ agents.forEach((a,i)=>{
+ agentList.innerHTML+=`<li>${a.name} <button class="removeBtn" onclick="removeAgent(${i})">-</button></li>`;
+ });
+}
+
+function startMission(){
+ if(agents.length<3){
+  showPopup("Minimum 3 agents");
+  return;
+ }
+
+ localStorage.setItem("session",JSON.stringify({
+  players:agents,
+  spyCount:parseInt(spySelect.value),
+  time:parseInt(timeSelect.value)
+ }));
+
+ newRound();
+}
+
+// ---------------- ROUND ----------------
+
+function newRound(){
+ const s=JSON.parse(localStorage.getItem("session"));
+
+ agents=s.players.map(p=>({name:p.name}));
+
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+
+ let spies=randomIndexes(agents.length,s.spyCount);
+
+ agents.forEach((a,i)=>{
+  a.spy=spies.includes(i);
+  if(!a.spy) a.role=roles.pop();
+  a.location=loc;
+ });
+
+ localStorage.setItem("roundAgents",JSON.stringify(agents));
+ localStorage.setItem("roundTime",s.time);
+
+ location="game.html";
+}
+
+// ---------------- GAME ----------------
+
+function setupGame(){
+ agents=JSON.parse(localStorage.getItem("roundAgents"));
+ showTurn();
+
+ hold.onmousedown=hold.ontouchstart=()=>{
+ let a=agents[current];
+ card.innerHTML=a.spy?"<div class='spy'>YOU ARE THE SPY</div>":`${a.location}<br>${a.role}`;
+ };
+
+ hold.onmouseup=hold.ontouchend=()=>{
+ card.innerHTML="";
+ nextBtn.style.display="block";
+ };
+}
+
+function showTurn(){
+ turn.innerText="PASS PHONE TO "+agents[current].name.toUpperCase();
+}
+
+function nextAgent(){
+ current++;
+ nextBtn.style.display="none";
+
+ if(current>=agents.length){
+  startTimerBtn.style.display="block";
+  turn.innerText="ALL ROLES DISTRIBUTED";
+ } else showTurn();
+}
+
+// ---------------- TIMER + ACCUSE ----------------
+
+function startTimer(){
+ if(timerStarted)return;
+ timerStarted=true;
+ startTimerBtn.style.display="none";
+
+ let t=parseInt(localStorage.getItem("roundTime"));
+
+ timerInterval=setInterval(()=>{
+ timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+ t--;
+ },1000);
+
+ showAccuse();
+}
+
+function showAccuse(){
+ accuseArea.innerHTML="<h3>ACCUSATIONS</h3>";
+ agents.forEach((a,i)=>{
+ accuseArea.innerHTML+=`${a.name} <button onclick="accuse(${i})">Accuse</button><br>`;
+ });
+}
+
+function accuse(i){
+ clearInterval(timerInterval);
+ showPopup(agents[i].spy?"MEMBERS WIN!":"SPY WINS!");
+}
+
+// ---------------- CONTROLS ----------------
+
+function playAgain(){ newRound(); }
+
+function endGame(){
+ localStorage.clear();
+ location="index.html";
+}
+
+// ---------------- INIT ----------------
+
+if(location.pathname.includes("game")) setupGame();
+
+
+
+
+
+index
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="style.css">
+<title>Spyfall</title>
+</head>
+
+<body class="center">
+
+<h1>COMMAND CENTER</h1>
+
+<input id="agentInput" placeholder="Agent Name">
+<button class="addAgent" onclick="addAgent()">ADD AGENT</button>
+
+<ul id="agentList"></ul>
+
+<select id="spySelect">
+<option value="1">1 Spy</option>
+<option value="2">2 Spies</option>
+</select>
+
+<select id="timeSelect">
+<option value="300">5 Minutes</option>
+<option value="480" selected>8 Minutes</option>
+<option value="600">10 Minutes</option>
+</select>
+
+<button class="start" onclick="startMission()">START MISSION</button>
+
+<!-- Popup -->
+<div id="popup" class="popup">
+ <div class="popupBox">
+  <h2 id="popupText"></h2>
+  <button class="start" onclick="closePopup()">OK</button>
+ </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
+
+
+
+game
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body class="center">
+
+<h2 id="turn"></h2>
+
+<div id="hold">HOLD TO REVEAL</div>
+<div id="card"></div>
+
+<button id="nextBtn" onclick="nextAgent()">NEXT AGENT</button>
+
+<button id="startTimerBtn" onclick="startTimer()">START TIMER</button>
+
+<h1 id="timer"></h1>
+
+<div id="accuseArea"></div>
+
+<button class="start" onclick="playAgain()">PLAY AGAIN</button>
+<button class="abort" onclick="endGame()">END GAME</button>
+
+<div id="popup" class="popup">
+ <div class="popupBox">
+  <h2 id="popupText"></h2>
+  <button class="start" onclick="closePopup()">BACK TO LOBBY</button>
+ </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+script
+
+
+let agents=[];
+let current=0;
+let timerStarted=false;
+let timerInterval;
+const locations = {
+
+"Kashmir Houseboat":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Amritsar Golden Temple":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Delhi Street Market":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Jaipur Palace":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Varanasi Ghats":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+"Mumbai Local Train":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Goa Beach Shack":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"Bengaluru IT Park":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Kerala Backwaters":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+"Hyderabad Biryani Hotel":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Kolkata Tram":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+"Puri Jagannath Temple":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Chennai Marina Beach":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Madurai Temple":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+"Assam Tea Estate":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+"Nagpur Orange Market":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Rajasthan Desert Camp":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Patna Railway":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Indore Sarafa Bazaar":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"Shillong View Point":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Agra Taj Mahal":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Lucknow Imambara":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+"Udaipur City Palace":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+"Bhopal Lakefront":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Surat Textile Market":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Ahmedabad Sabarmati":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+"Rajkot Workshop":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+"Coimbatore Factory":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+"Vizag Shipyard":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+"Ranchi Waterfall":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+"Raipur Rice Mill":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Guwahati Ferry":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+"Imphal Handloom":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+"Aizawl Hill Cafe":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Gangtok Ropeway":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Darjeeling Toy Train":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Dhanbad Coal Mine":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Jamshedpur Steel Plant":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Chandigarh Sector Market":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Shimla Ridge":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+"Manali Snow Camp":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Leh Army Camp":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur Blue City":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+
+};
+
+function randomIndexes(n,count){
+ let s=new Set();
+ while(s.size<count) s.add(Math.floor(Math.random()*n));
+ return [...s];
+}
+
+function showPopup(t){
+ popupText.innerText=t;
+
+ popupBox.classList.remove("spyTheme","memberTheme");
+
+ if(t==="SPY WINS!"){
+   popupBox.classList.add("spyTheme");
+ }else{
+   popupBox.classList.add("memberTheme");
+ }
+
+ popup.style.display="flex";
+}
+
+
+function closePopup(){ popup.style.display="none"; }
+
+// LOBBY
+
+function addAgent(){
+ let n=agentInput.value;
+ if(!n)return;
+ agents.push({name:n});
+ renderAgents();
+ agentInput.value="";
+}
+
+function removeAgent(i){
+ agents.splice(i,1);
+ renderAgents();
+}
+
+function renderAgents(){
+ agentList.innerHTML="";
+ agents.forEach((a,i)=>{
+ agentList.innerHTML+=`
+ <li>${a.name}
+ <button class="remove" onclick="removeAgent(${i})">-</button>
+ </li>`;
+ });
+}
+
+function startMission(){
+ if(agents.length<3){
+ showPopup("MINIMUM 3 AGENTS");
+ return;
+ }
+
+ localStorage.setItem("session",JSON.stringify({
+ players:agents,
+ spyCount:parseInt(spySelect.value),
+ time:parseInt(timeSelect.value)
+ }));
+
+ newRound();
+}
+
+// ROUND
+
+function newRound(){
+ const s=JSON.parse(localStorage.getItem("session"));
+
+ agents=s.players.map(p=>({name:p.name}));
+
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+
+ let spies=randomIndexes(agents.length,s.spyCount);
+
+ agents.forEach((a,i)=>{
+ a.spy=spies.includes(i);
+ if(!a.spy) a.role=roles.pop();
+ a.location=loc;
+ });
+
+ localStorage.setItem("roundAgents",JSON.stringify(agents));
+ localStorage.setItem("roundTime",s.time);
+
+ location="game.html";
+}
+
+// GAME
+
+function setupGame(){
+ agents=JSON.parse(localStorage.getItem("roundAgents"));
+ showTurn();
+
+ hold.onmousedown=hold.ontouchstart=()=>{
+ let a=agents[current];
+ card.innerHTML=a.spy?"<div class='spy'>YOU ARE THE SPY</div>":`${a.location}<br>${a.role}`;
+ };
+
+ hold.onmouseup=hold.ontouchend=()=>{
+ card.innerHTML="";
+ nextBtn.style.display="block";
+ };
+}
+
+function showTurn(){
+ turn.innerText="PASS PHONE TO "+agents[current].name.toUpperCase();
+}
+
+function nextAgent(){
+ current++;
+ nextBtn.style.display="none";
+
+ if(current>=agents.length){
+ startTimerBtn.style.display="block";
+ turn.innerText="ALL ROLES DISTRIBUTED";
+ } else showTurn();
+}
+
+// TIMER + ACCUSE
+
+function startTimer(){
+ if(timerStarted)return;
+ timerStarted=true;
+ startTimerBtn.style.display="none";
+
+ let t=parseInt(localStorage.getItem("roundTime"));
+
+ timerInterval=setInterval(()=>{
+ timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+ t--;
+ },1000);
+
+ showAccuse();
+}
+
+function showAccuse(){
+ accuseArea.innerHTML="<h3 class='accTitle'>ACCUSATIONS</h3>";
+ agents.forEach((a,i)=>{
+ accuseArea.innerHTML+=`
+ <div>
+ <span>${a.name}</span>
+ <button class="accuse" onclick="accuse(${i})">Accuse</button>
+ </div>`;
+ });
+}
+
+function accuse(i){
+ clearInterval(timerInterval);
+ showPopup(agents[i].spy?"MEMBERS WIN!":"SPY WINS!");
+}
+
+// CONTROLS
+
+function playAgain(){ newRound(); }
+
+function endGame(){
+ localStorage.clear();
+ location="index.html";
+}
+
+if(location.pathname.includes("game")) setupGame();
+
+
+
+css
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+font-family:Inter,sans-serif;
+}
+
+body{
+background:#020617;
+color:#e5e7eb;
+min-height:100vh;
+}
+
+.center{
+display:flex;
+flex-direction:column;
+align-items:center;
+padding:20px;
+max-width:430px;
+margin:auto;
+}
+
+/* TITLE */
+
+h1{
+color:#4ade80;
+font-size:32px;
+margin:20px 0;
+text-shadow:0 0 15px rgba(74,222,128,.6);
+}
+
+h2{
+margin:15px 0;
+}
+
+/* INPUT */
+
+input,select{
+width:100%;
+background:#0f172a;
+border:1px solid #1f2933;
+padding:14px;
+border-radius:12px;
+color:white;
+margin-bottom:10px;
+}
+
+/* BUTTONS */
+
+button{
+border:none;
+border-radius:14px;
+padding:14px;
+font-weight:700;
+cursor:pointer;
+margin-top:10px;
+}
+
+.start{
+background:#4ade80;
+color:black;
+width:100%;
+font-size:18px;
+box-shadow:0 0 20px rgba(74,222,128,.4);
+}
+
+.abort{
+background:#7f1d1d;
+color:#fecaca;
+width:100%;
+}
+
+button:hover{transform:scale(.98);}
+
+/* AGENT LIST */
+
+#agentList{
+width:100%;
+margin-top:10px;
+}
+
+#agentList li{
+background:#020b1a;
+padding:12px;
+margin-bottom:8px;
+border-radius:12px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+border:1px solid #1f2933;
+}
+
+/* REMOVE */
+
+.remove{
+background:#7f1d1d;
+color:white;
+padding:6px 14px;
+border-radius:10px;
+}
+
+/* HOLD */
+
+#hold{
+width:220px;
+height:220px;
+border-radius:50%;
+border:2px solid #4ade80;
+display:flex;
+align-items:center;
+justify-content:center;
+margin:30px auto;
+color:#4ade80;
+font-weight:bold;
+box-shadow:0 0 40px rgba(74,222,128,.3);
+}
+
+/* CARD */
+
+#card{
+margin:20px;
+text-align:center;
+font-size:22px;
+color:#4ade80;
+}
+
+.spy{
+color:red;
+font-weight:800;
+}
+
+/* TIMER */
+
+#timer{
+font-size:48px;
+color:#4ade80;
+margin:15px;
+}
+
+/* NEXT */
+
+#nextBtn,#startTimerBtn{
+width:100%;
+background:#4ade80;
+color:black;
+display:none;
+}
+
+/* ACCUSE */
+
+#accuseArea{
+width:100%;
+margin-top:20px;
+}
+
+.accTitle{
+text-align:center;
+color:red;
+font-weight:800;
+margin-bottom:10px;
+}
+
+#accuseArea div{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#020b1a;
+padding:10px;
+border-radius:12px;
+margin-bottom:8px;
+border:1px solid #1f2933;
+}
+
+.accuse{
+background:#7f1d1d;
+color:white;
+padding:8px 14px;
+border-radius:10px;
+}
+
+/* POPUP */
+
+.popup{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.8);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:100;
+}
+
+.popupBox{
+background:#020b1a;
+border:2px solid #4ade80;
+padding:30px;
+border-radius:25px;
+text-align:center;
+width:85%;
+box-shadow:0 0 40px rgba(74,222,128,.5);
+}
+
+.popupBox h2{
+color:#4ade80;
+margin-bottom:20px;
+}
+.popupBox{
+border:2px solid #4ade80;
+box-shadow:0 0 40px rgba(74,222,128,.5);
+}
+
+.popupBox h2{
+color:#4ade80;
+}
+/* THEMES */
+
+.memberTheme{
+border:2px solid #4ade80;
+box-shadow:0 0 40px rgba(74,222,128,.5);
+}
+
+.memberTheme h2{
+color:#4ade80;
+}
+
+.memberTheme .start{
+background:#4ade80;
+color:black;
+}
+
+/* SPY RED THEME */
+
+.spyTheme{
+border:2px solid #ef4444;
+box-shadow:0 0 40px rgba(239,68,68,.6);
+}
+
+.spyTheme h2{
+color:#ef4444;
+font-weight:900;
+}
+
+.spyTheme .start{
+background:#7f1d1d;
+color:#fff;
+box-shadow:0 0 20px rgba(239,68,68,.5);
+}
+
+/* MOBILE */
+
+@media(max-height:700px){
+#hold{
+width:180px;
+height:180px;
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+script 2
+
+
+
+// ================= COMMON =================
+
+let agents=[];
+let current=0;
+let timerStarted=false;
+let timerInterval;
+let phase="reveal";
+let voteIndex=0;
+
+const isGame = location.pathname.includes("game");
+
+// BASIC LOCATIONS (you can paste your full list back later)
+const locations = {
+ "Kashmir Houseboat":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Amritsar Golden Temple":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Delhi Street Market":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Jaipur Palace":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Varanasi Ghats":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+"Mumbai Local Train":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Goa Beach Shack":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"Bengaluru IT Park":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Kerala Backwaters":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+"Hyderabad Biryani Hotel":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Kolkata Tram":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+"Puri Jagannath Temple":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Chennai Marina Beach":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Madurai Temple":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+"Assam Tea Estate":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+"Nagpur Orange Market":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Rajasthan Desert Camp":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Patna Railway":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Indore Sarafa Bazaar":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"Shillong View Point":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Agra Taj Mahal":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Lucknow Imambara":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+"Udaipur City Palace":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+"Bhopal Lakefront":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Surat Textile Market":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Ahmedabad Sabarmati":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+"Rajkot Workshop":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+"Coimbatore Factory":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+"Vizag Shipyard":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+"Ranchi Waterfall":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+"Raipur Rice Mill":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Guwahati Ferry":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+"Imphal Handloom":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+"Aizawl Hill Cafe":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Gangtok Ropeway":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Darjeeling Toy Train":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Dhanbad Coal Mine":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Jamshedpur Steel Plant":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Chandigarh Sector Market":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Shimla Ridge":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+"Manali Snow Camp":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Leh Army Camp":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur Blue City":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+
+};
+
+function randomIndexes(n,c){
+ let s=new Set();
+ while(s.size<c) s.add(Math.floor(Math.random()*n));
+ return [...s];
+}
+
+// ================= INDEX / LOBBY =================
+
+if(!isGame){
+
+const agentInput=document.getElementById("agentInput");
+const agentList=document.getElementById("agentList");
+const spySelect=document.getElementById("spySelect");
+const timeSelect=document.getElementById("timeSelect");
+
+window.addAgent=function(){
+
+ const name=agentInput.value.trim();
+ if(!name) return;
+
+ agents.push({name});
+ agentInput.value="";
+ renderAgents();
+};
+
+window.removeAgent=function(i){
+ agents.splice(i,1);
+ renderAgents();
+};
+
+function renderAgents(){
+
+ agentList.innerHTML="";
+
+ agents.forEach((a,i)=>{
+ agentList.innerHTML+=`
+ <li>${a.name}
+ <button onclick="removeAgent(${i})">-</button>
+ </li>`;
+ });
+}
+
+window.startMission=function(){
+
+ if(agents.length<3){
+ alert("Minimum 3 agents");
+ return;
+ }
+
+ localStorage.setItem("session",JSON.stringify({
+ players:agents,
+ spyCount:parseInt(spySelect.value),
+ time:parseInt(timeSelect.value)
+ }));
+
+ newRound();
+};
+
+function newRound(){
+
+ const s=JSON.parse(localStorage.getItem("session"));
+
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+
+ let spies=randomIndexes(s.players.length,s.spyCount);
+
+ let roundAgents=s.players.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(roundAgents));
+ localStorage.setItem("roundTime",s.time);
+
+ location="game.html";
+}
+
+}
+
+// ================= GAME =================
+
+if(isGame){
+
+const accuseArea=document.getElementById("accuseArea");
+const startVoteBtn=document.getElementById("startVoteBtn");
+const startTimerBtn=document.getElementById("startTimerBtn");
+const nextBtn=document.getElementById("nextBtn");
+const timer=document.getElementById("timer");
+const turn=document.getElementById("turn");
+const hold=document.getElementById("hold");
+const card=document.getElementById("card");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+
+agents=JSON.parse(localStorage.getItem("roundAgents"));
+
+accuseArea.style.display="none";
+startVoteBtn.style.display="none";
+localStorage.removeItem("votes");
+
+showTurn();
+
+// ---- ROLE REVEAL ----
+
+hold.onmousedown=()=>{
+ let a=agents[current];
+ card.innerHTML=a.spy?"YOU ARE THE SPY":`${a.location}<br>${a.role}`;
+};
+
+hold.onmouseup=()=>{
+ card.innerHTML="";
+ nextBtn.style.display="block";
+};
+
+nextBtn.onclick=()=>{
+
+ current++;
+ nextBtn.style.display="none";
+
+ if(current>=agents.length){
+ startTimerBtn.style.display="block";
+ turn.innerText="ALL ROLES DISTRIBUTED";
+ } else showTurn();
+};
+
+function showTurn(){
+ turn.innerText="PASS PHONE TO "+agents[current].name.toUpperCase();
+}
+
+// ---- TIMER ----
+
+startTimerBtn.onclick=startTimer;
+startVoteBtn.onclick=beginVoting;
+
+function startTimer(){
+
+ if(timerStarted) return;
+ timerStarted=true;
+ startTimerBtn.style.display="none";
+
+ let t=parseInt(localStorage.getItem("roundTime"));
+
+ timerInterval=setInterval(()=>{
+
+ timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+
+ if(t<=0){
+ clearInterval(timerInterval);
+ timer.innerText="TIME UP";
+ startVoteBtn.style.display="block";
+ }
+
+ t--;
+
+ },1000);
+}
+
+// ---- VOTING ----
+
+function beginVoting(){
+
+ phase="voting";
+ voteIndex=0;
+
+ localStorage.setItem("votes",JSON.stringify([]));
+
+ accuseArea.style.display="block";
+ startVoteBtn.style.display="none";
+
+ showVoteTurn();
+}
+
+function showVoteTurn(){
+
+ accuseArea.innerHTML=`<h3>PASS PHONE TO ${agents[voteIndex].name}</h3>`;
+
+ agents.forEach((a,i)=>{
+ accuseArea.innerHTML+=`<button class="accuse" onclick="castVote(${i})">${a.name}</button>`;
+ });
+}
+
+window.castVote=function(i){
+
+ if(phase!=="voting") return;
+
+ let v=JSON.parse(localStorage.getItem("votes"));
+ v.push(i);
+ localStorage.setItem("votes",JSON.stringify(v));
+
+ accuseArea.innerHTML=`<h2>Vote Recorded</h2><button onclick="nextVote()">PASS PHONE</button>`;
+};
+
+window.nextVote=function(){
+
+ voteIndex++;
+
+ if(voteIndex>=agents.length){
+ finalizeVotes();
+ } else showVoteTurn();
+};
+
+// ---- RESULTS ----
+
+function finalizeVotes(){
+
+ phase="finished";
+
+ let votes=JSON.parse(localStorage.getItem("votes"));
+
+ let tally={};
+
+ votes.forEach(v=>tally[v]=(tally[v]||0)+1);
+
+ let max=0;
+ let accused=null;
+ let tie=false;
+
+ Object.keys(tally).forEach(k=>{
+ if(tally[k]>max){max=tally[k];accused=k;tie=false;}
+ else if(tally[k]==max) tie=true;
+ });
+
+ if(tie){
+ popupText.innerText="SPY WINS!";
+ popup.style.display="flex";
+ return;
+ }
+
+ popupText.innerText=agents[accused].spy?"MEMBERS WIN!":"SPY WINS!";
+ popup.style.display="flex";
+}
+
+document.getElementById("closePopup").onclick=()=>popup.style.display="none";
+document.getElementById("playAgain").onclick=()=>location.reload();
+document.getElementById("endGame").onclick=()=>location="index.html";
+
+}
+
+
+
+
+
+
+
+
+
+
+
+new script
+let agents=[];
+let current=0;
+let timerStarted=false;
+let timerInterval;
+let phase="reveal";
+let voteIndex=0;
+
+const isGame=location.pathname.includes("game");
+
+const locations={
+ "Kashmir Houseboat":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Amritsar Golden Temple":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Delhi Street Market":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Jaipur Palace":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Varanasi Ghats":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+"Mumbai Local Train":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Goa Beach Shack":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"Bengaluru IT Park":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Kerala Backwaters":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+"Hyderabad Biryani Hotel":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Kolkata Tram":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+"Puri Jagannath Temple":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Chennai Marina Beach":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Madurai Temple":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+"Assam Tea Estate":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+"Nagpur Orange Market":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Rajasthan Desert Camp":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Patna Railway":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Indore Sarafa Bazaar":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"Shillong View Point":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Agra Taj Mahal":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Lucknow Imambara":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+"Udaipur City Palace":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+"Bhopal Lakefront":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Surat Textile Market":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Ahmedabad Sabarmati":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+"Rajkot Workshop":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+"Coimbatore Factory":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+"Vizag Shipyard":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+"Ranchi Waterfall":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+"Raipur Rice Mill":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Guwahati Ferry":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+"Imphal Handloom":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+"Aizawl Hill Cafe":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Gangtok Ropeway":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Darjeeling Toy Train":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Dhanbad Coal Mine":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Jamshedpur Steel Plant":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Chandigarh Sector Market":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Shimla Ridge":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+"Manali Snow Camp":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Leh Army Camp":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur Blue City":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+};
+
+function randomIndexes(n,c){
+ let s=new Set();
+ while(s.size<c)s.add(Math.floor(Math.random()*n));
+ return [...s];
+}
+
+/* ================= LOBBY ================= */
+
+if(!isGame){
+
+const agentInput=document.getElementById("agentInput");
+const agentList=document.getElementById("agentList");
+const spySelect=document.getElementById("spySelect");
+const timeSelect=document.getElementById("timeSelect");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+
+window.closePopup=()=>popup.style.display="none";
+
+window.addAgent=()=>{
+ let n=agentInput.value.trim();
+ if(!n)return;
+ agents.push({name:n});
+ agentInput.value="";
+ render();
+};
+
+window.removeAgent=i=>{
+ agents.splice(i,1);
+ render();
+};
+
+function render(){
+ agentList.innerHTML="";
+ agents.forEach((a,i)=>{
+ agentList.innerHTML+=`
+ <li>${a.name}
+ <button class="remove" onclick="removeAgent(${i})">-</button>
+ </li>`;
+ });
+}
+
+window.startMission=()=>{
+
+ if(agents.length<3){
+ popupText.innerText="MINIMUM 3 AGENTS";
+ popup.style.display="flex";
+ return;
+ }
+
+ localStorage.setItem("session",JSON.stringify({
+ players:agents,
+ spyCount:+spySelect.value,
+ time:+timeSelect.value
+ }));
+
+ newRound();
+};
+
+function newRound(){
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(s.players.length,s.spyCount);
+
+ let round=s.players.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ localStorage.setItem("roundTime",s.time);
+
+ location="game.html";
+}
+}
+
+/* ================= GAME ================= */
+
+if(isGame){
+
+const accuseArea=document.getElementById("accuseArea");
+const startVoteBtn=document.getElementById("startVoteBtn");
+const startTimerBtn=document.getElementById("startTimerBtn");
+const nextBtn=document.getElementById("nextBtn");
+const timer=document.getElementById("timer");
+const turn=document.getElementById("turn");
+const hold=document.getElementById("hold");
+const card=document.getElementById("card");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+const popupBox=document.getElementById("popupBox");
+const playAgain=document.getElementById("playAgain");
+
+agents=JSON.parse(localStorage.getItem("roundAgents"));
+
+accuseArea.style.display="none";
+startVoteBtn.style.display="none";
+playAgain.style.display="none";
+localStorage.removeItem("votes");
+
+showTurn();
+
+/* ---- REVEAL ---- */
+
+function reveal(){
+ if(phase!=="reveal") return;
+
+ let a=agents[current];
+ card.innerHTML=a.spy
+ ?"<div class='spy'>YOU ARE THE SPY</div>"
+ :`<div>${a.location}</div><div>${a.role}</div>`;
+ card.style.display="block";
+}
+
+function hideReveal(){
+ if(phase!=="reveal") return;
+
+ card.style.display="none";
+
+ if(current===agents.length-1){
+ startTimerBtn.style.display="block";
+ turn.innerText="ALL ROLES DISTRIBUTED";
+ }else nextBtn.style.display="block";
+}
+
+// desktop
+hold.onmousedown=reveal;
+hold.onmouseup=hideReveal;
+
+// mobile
+hold.addEventListener("touchstart",e=>{
+ e.preventDefault();
+ reveal();
+});
+
+hold.addEventListener("touchend",e=>{
+ e.preventDefault();
+ hideReveal();
+});
+
+nextBtn.onclick=()=>{
+ current++;
+ nextBtn.style.display="none";
+ showTurn();
+};
+
+function showTurn(){
+ turn.innerHTML=`PASS PHONE TO ${agents[current].name.toUpperCase()}`;
+}
+/* ---- TIMER ---- */
+
+startTimerBtn.onclick=startTimer;
+startVoteBtn.onclick=beginVoting;
+
+function startTimer(){
+
+ if(timerStarted)return;
+
+ timerStarted=true;
+ phase="timer";
+
+ startTimerBtn.style.display="none";
+ startVoteBtn.style.display="block";
+ startVoteBtn.innerText = `START VOTING -- ( ${agents[0].name.toUpperCase()} goes first)`;
+
+ let t=+localStorage.getItem("roundTime");
+
+ timerInterval=setInterval(()=>{
+ timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+ if(t<=0) clearInterval(timerInterval);
+ t--;
+ },1000);
+}
+
+/* ---- VOTING ---- */
+
+/* ---- VOTING ---- */
+
+function beginVoting(){
+
+ if(phase==="voting")return;
+ phase="voting";
+
+ voteIndex=0;
+ localStorage.setItem("votes",JSON.stringify([]));
+
+ accuseArea.style.display="block";
+ startVoteBtn.style.display="none";
+
+ showVote();
+}
+
+function showVote(){
+
+ accuseArea.innerHTML=`
+ <h3 class="pass glow">${agents[voteIndex].name.toUpperCase()} CAST YOUR VOTE</h3>
+ `;
+
+ agents.forEach((a,i)=>{
+ accuseArea.innerHTML+=`
+ <div class="voteRow">
+   <span>${a.name}</span>
+   <button class="accuse" onclick="castVote(${i})">VOTE</button>
+ </div>`;
+ });
+}
+
+window.castVote=i=>{
+
+ let v=JSON.parse(localStorage.getItem("votes"));
+ v.push(i);
+ localStorage.setItem("votes",JSON.stringify(v));
+
+ let last = voteIndex === agents.length-1;
+
+ accuseArea.innerHTML=`
+ 
+ <button class="start" onclick="nextVote()">${last ? "SEE RESULT" : "PASS PHONE TO " + agents[voteIndex + 1].name.toUpperCase()}</button>
+ `;
+};
+
+window.nextVote=()=>{
+
+ voteIndex++;
+
+ if(voteIndex>=agents.length){
+ finalize();
+ } else {
+ showVote();
+ }
+};
+
+
+/* ---- RESULT ---- */
+
+function finalize(){
+
+ phase="finished";
+
+ let votes=JSON.parse(localStorage.getItem("votes"));
+ let tally={};
+
+ votes.forEach(v=>tally[v]=(tally[v]||0)+1);
+
+ let max=0,acc=null,tie=false;
+
+ Object.keys(tally).forEach(k=>{
+ if(tally[k]>max){max=tally[k];acc=k;tie=false;}
+ else if(tally[k]==max) tie=true;
+ });
+
+ popupBox.classList.remove("spyTheme","memberTheme");
+
+ if(tie || !agents[acc].spy){
+ popupBox.classList.add("spyTheme");
+ popupText.innerText="SPY WINS!";
+ }else{
+ popupBox.classList.add("memberTheme");
+ popupText.innerText="MEMBERS WIN!";
+ }
+
+ popup.style.display="flex";
+ playAgain.style.display="block";
+}
+
+/* PLAY AGAIN */
+
+playAgain.onclick=()=>{
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(agents.length,s.spyCount);
+
+ let round=agents.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ location="game.html";
+};
+
+document.getElementById("closePopup").onclick=()=>popup.style.display="none";
+document.getElementById("endGame").onclick=()=>location="index.html";
+
+}
+
+
+
+
+
+
+
+
+
+
+newest code
+
+let agents=[];
+let current=0;
+let timerStarted=false;
+let timerInterval;
+let phase="reveal";
+let voteIndex=0;
+
+const isGame=location.pathname.includes("game");
+
+const locations={
+ "Kashmir Houseboat":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Amritsar Golden Temple":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Delhi Street Market":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Jaipur Palace":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Varanasi Ghats":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
+"Mumbai Local Train":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Goa Beach Shack":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"Bengaluru IT Park":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Kerala Backwaters":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
+"Hyderabad Biryani Hotel":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Kolkata Tram":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
+"Puri Jagannath Temple":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Chennai Marina Beach":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Madurai Temple":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
+"Assam Tea Estate":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
+"Nagpur Orange Market":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Rajasthan Desert Camp":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Patna Railway":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Indore Sarafa Bazaar":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"Shillong View Point":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Agra Taj Mahal":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Lucknow Imambara":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
+"Udaipur City Palace":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
+"Bhopal Lakefront":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Surat Textile Market":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Ahmedabad Sabarmati":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
+"Rajkot Workshop":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
+"Coimbatore Factory":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
+"Vizag Shipyard":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
+"Ranchi Waterfall":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
+"Raipur Rice Mill":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Guwahati Ferry":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
+"Imphal Handloom":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
+"Aizawl Hill Cafe":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Gangtok Ropeway":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Darjeeling Toy Train":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Dhanbad Coal Mine":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Jamshedpur Steel Plant":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Chandigarh Sector Market":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Shimla Ridge":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
+"Manali Snow Camp":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Leh Army Camp":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur Blue City":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+};
+
+function randomIndexes(n,c){
+ let s=new Set();
+ while(s.size<c)s.add(Math.floor(Math.random()*n));
+ return [...s];
+}
+
+/* ================= LOBBY ================= */
+
+if(!isGame){
+
+const agentInput=document.getElementById("agentInput");
+const agentList=document.getElementById("agentList");
+const spySelect=document.getElementById("spySelect");
+const timeSelect=document.getElementById("timeSelect");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+
+window.closePopup=()=>popup.style.display="none";
+
+window.addAgent=()=>{
+ let n=agentInput.value.trim();
+ if(!n)return;
+ agents.push({name:n});
+ agentInput.value="";
+ render();
+};
+
+window.removeAgent=i=>{
+ agents.splice(i,1);
+ render();
+};
+
+function render(){
+ agentList.innerHTML="";
+ agents.forEach((a,i)=>{
+ agentList.innerHTML+=`
+ <li>${a.name}
+ <button class="remove" onclick="removeAgent(${i})">-</button>
+ </li>`;
+ });
+}
+
+window.startMission=()=>{
+
+ if(agents.length<3){
+ popupText.innerText="MINIMUM 3 AGENTS";
+ popup.style.display="flex";
+ return;
+ }
+
+ localStorage.setItem("session",JSON.stringify({
+ players:agents,
+ spyCount:+spySelect.value,
+ time:+timeSelect.value
+ }));
+
+ newRound();
+};
+
+function newRound(){
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(s.players.length,s.spyCount);
+
+ let round=s.players.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ localStorage.setItem("roundTime",s.time);
+
+ location="game.html";
+}
+}
+
+/* ================= GAME ================= */
+
+if(isGame){
+
+const accuseArea=document.getElementById("accuseArea");
+const startVoteBtn=document.getElementById("startVoteBtn");
+const startTimerBtn=document.getElementById("startTimerBtn");
+const nextBtn=document.getElementById("nextBtn");
+const timer=document.getElementById("timer");
+const turn=document.getElementById("turn");
+const hold=document.getElementById("hold");
+const card=document.getElementById("card");
+const popup=document.getElementById("popup");
+const popupText=document.getElementById("popupText");
+const popupBox=document.getElementById("popupBox");
+const playAgain=document.getElementById("playAgain");
+
+agents=JSON.parse(localStorage.getItem("roundAgents"));
+
+accuseArea.style.display="none";
+startVoteBtn.style.display="none";
+playAgain.style.display="none";
+localStorage.removeItem("votes");
+
+showTurn();
+
+/* ---- REVEAL ---- */
+
+function reveal(){
+ if(phase!=="reveal") return;
+
+ let a=agents[current];
+ card.innerHTML=a.spy
+ ?"<div class='spy'>YOU ARE THE SPY</div>"
+ :`<div>${a.location}</div><div>${a.role}</div>`;
+ card.style.display="block";
+}
+
+function hideReveal(){
+ if(phase!=="reveal") return;
+
+ card.style.display="none";
+
+ if(current===agents.length-1){
+ startTimerBtn.style.display="block";
+ turn.innerText="ALL ROLES DISTRIBUTED";
+ }else nextBtn.style.display="block";
+}
+
+// desktop
+hold.onmousedown=reveal;
+hold.onmouseup=hideReveal;
+
+// mobile
+hold.addEventListener("touchstart",e=>{
+ e.preventDefault();
+ reveal();
+});
+
+hold.addEventListener("touchend",e=>{
+ e.preventDefault();
+ hideReveal();
+});
+
+nextBtn.onclick=()=>{
+ current++;
+ nextBtn.style.display="none";
+ showTurn();
+};
+
+function showTurn(){
+ turn.innerHTML=`PASS PHONE TO ${agents[current].name.toUpperCase()}`;
+}
+/* ---- TIMER ---- */
+
+startTimerBtn.onclick=startTimer;
+startVoteBtn.onclick=beginVoting;
+
+function startTimer(){
+
+ if(timerStarted)return;
+
+ timerStarted=true;
+ phase="timer";
+
+ startTimerBtn.style.display="none";
+ startVoteBtn.style.display="block";
+ startVoteBtn.innerText = `START VOTING -- ( ${agents[0].name.toUpperCase()} goes first)`;
+
+ let t=+localStorage.getItem("roundTime");
+
+ timerInterval=setInterval(()=>{
+ timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+ if(t<=0) clearInterval(timerInterval);
+ t--;
+ },1000);
+}
+
+/* ---- VOTING ---- */
+
+function beginVoting(){
+
+ if(phase==="voting")return;
+ clearInterval(timerInterval);
+ phase="voting";
+
+ voteIndex=0;
+ localStorage.setItem("votes",JSON.stringify([]));
+
+ accuseArea.style.display="block";
+ startVoteBtn.style.display="none";
+
+ showVote();
+}
+
+function showVote(){
+
+ accuseArea.innerHTML=`
+ <h3 class="pass glow">${agents[voteIndex].name.toUpperCase()} CAST YOUR VOTE</h3>
+ `;
+
+ agents.forEach((a,i)=>{
+ accuseArea.innerHTML+=`
+ <div class="voteRow">
+   <span>${a.name}</span>
+   <button class="accuse" onclick="castVote(${i})">VOTE</button>
+ </div>`;
+ });
+}
+
+window.castVote=i=>{
+
+ let v=JSON.parse(localStorage.getItem("votes"));
+ v.push(i);
+ localStorage.setItem("votes",JSON.stringify(v));
+
+ let last = voteIndex === agents.length-1;
+
+ accuseArea.innerHTML=`
+ 
+ <button class="start" onclick="nextVote()">${last ? "SEE RESULT" : "PASS PHONE TO " + agents[voteIndex + 1].name.toUpperCase()}</button>
+ `;
+};
+
+window.nextVote=()=>{
+
+ voteIndex++;
+
+ if(voteIndex>=agents.length){
+ finalize();
+ } else {
+ showVote();
+ }
+};
+
+
+/* ---- RESULT ---- */
+
+function finalize(){
+
+ phase="finished";
+
+ let votes=JSON.parse(localStorage.getItem("votes"));
+ let tally={};
+
+ votes.forEach(v=>tally[v]=(tally[v]||0)+1);
+
+ let max=0,acc=null,tie=false;
+
+ Object.keys(tally).forEach(k=>{
+ if(tally[k]>max){max=tally[k];acc=k;tie=false;}
+ else if(tally[k]==max) tie=true;
+ });
+
+ popupBox.classList.remove("spyTheme","memberTheme");
+
+ if(tie || !agents[acc].spy){
+ popupBox.classList.add("spyTheme");
+ popupText.innerText="SPY WINS!";
+ }else{
+ popupBox.classList.add("memberTheme");
+ popupText.innerText="MEMBERS WIN!";
+ }
+
+ popup.style.display="flex";
+ playAgain.style.display="block";
+}
+
+/* PLAY AGAIN */
+
+playAgain.onclick=()=>{
+
+ let s=JSON.parse(localStorage.getItem("session"));
+ let locNames=Object.keys(locations);
+ let loc=locNames[Math.floor(Math.random()*locNames.length)];
+ let roles=[...locations[loc]];
+ let spies=randomIndexes(agents.length,s.spyCount);
+
+ let round=agents.map((p,i)=>({
+ name:p.name,
+ spy:spies.includes(i),
+ role:spies.includes(i)?null:roles.pop(),
+ location:loc
+ }));
+
+ localStorage.setItem("roundAgents",JSON.stringify(round));
+ location="game.html";
+};
+
+document.getElementById("closePopup").onclick=()=>popup.style.display="none";
+document.getElementById("endGame").onclick=()=>location="index.html";
+
+}
+
+
+
+
+
+index
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="style.css">
+<title>Command Center</title>
+</head>
+
+<body class="center">
+
+<h1>COMMAND CENTER</h1>
+
+<input id="agentInput" placeholder="Agent Name">
+
+<button class="start" onclick="addAgent()">ADD AGENT</button>
+
+<ul id="agentList"></ul>
+
+<select id="spySelect">
+<option value="1">1 Spy</option>
+<option value="2">2 Spies</option>
+</select>
+
+<select id="timeSelect">
+<option value="300">5 Minutes</option>
+<option value="480" selected>8 Minutes</option>
+<option value="600">10 Minutes</option>
+</select>
+
+<button class="start" onclick="startMission()">START MISSION</button>
+
+<div id="popup" class="popup">
+ <div class="popupBox memberTheme" id="popupBox">
+  <h2 id="popupText"></h2>
+  <button class="start" onclick="closePopup()">OK</button>
+ </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+Style.css
+
+
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+font-family:Inter,sans-serif;
+}
+
+body{
+background:#020617;
+color:#e5e7eb;
+min-height:100vh;
+}
+
+.center{
+display:flex;
+flex-direction:column;
+align-items:center;
+padding:20px;
+max-width:430px;
+margin:auto;
+}
+
+h1{
+color:#4ade80;
+font-size:32px;
+margin:20px 0;
+text-shadow:0 0 15px rgba(74,222,128,.6);
+}
+
+.theme{color:#4ade80;font-weight:800;}
+
+.loc{color:#4ade80;font-weight:900;margin-bottom:6px;}
+
+input,select{
+width:100%;
+background:#0f172a;
+border:1px solid #1f2933;
+padding:14px;
+border-radius:12px;
+color:white;
+margin-bottom:10px;
+}
+
+button{
+border:none;
+border-radius:14px;
+padding:14px;
+font-weight:700;
+cursor:pointer;
+margin-top:10px;
+}
+
+.start{
+background:#4ade80;
+color:black;
+width:100%;
+font-size:18px;
+box-shadow:0 0 20px rgba(74,222,128,.4);
+}
+
+.abort{
+background:#7f1d1d;
+color:#fecaca;
+width:100%;
+}
+
+#agentList{
+width:100%;
+margin-top:10px;
+}
+
+#agentList li{
+background:#020b1a;
+padding:12px;
+margin-bottom:8px;
+border-radius:12px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+border:1px solid #1f2933;
+}
+
+/* MUTED REMOVE */
+.remove{
+background:#3f0d0d;
+color:#fecaca;
+padding:6px 14px;
+border-radius:10px;
+opacity:.7;
+}
+
+#hold{
+width:220px;
+height:220px;
+border-radius:50%;
+border:2px solid #4ade80;
+display:flex;
+align-items:center;
+justify-content:center;
+margin:30px auto;
+color:#4ade80;
+font-weight:bold;
+box-shadow:0 0 40px rgba(74,222,128,.3);
+}
+
+/* ROLE + LOCATION NOW THEME */
+#card{
+margin:20px;
+text-align:center;
+font-size:22px;
+color:#4ade80;
+}
+
+.spy{color:#ef4444;font-weight:900;}
+
+#timer{
+font-size:48px;
+color:#4ade80;
+margin:15px;
+}
+
+#nextBtn,#startTimerBtn{
+width:100%;
+background:#4ade80;
+color:black;
+display:none;
+}
+
+#accuseArea{
+width:100%;
+margin-top:20px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+/* ONLY BUTTON RED — ROW THEME */
+.voteRow{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#020b1a;
+padding:12px;
+border-radius:12px;
+margin-bottom:8px;
+color:#4ade80;
+border:1px solid #1f2933;
+}
+
+.accuse{
+background:#7f1d1d;
+color:white;
+padding:8px 16px;
+border-radius:10px;
+}
+
+/* POPUP */
+
+.popup{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.8);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:100;
+}
+
+.popupBox{
+background:#020b1a;
+padding:30px;
+border-radius:25px;
+text-align:center;
+width:85%;
+}
+
+.memberTheme{
+border:2px solid #4ade80;
+box-shadow:0 0 40px rgba(74,222,128,.5);
+}
+
+/* SPY RED THEME */
+
+.spyTheme{
+border:2px solid #ef4444;
+box-shadow:0 0 40px rgba(239,68,68,.6);
+}
+
+/* SPY BACK BUTTON RED */
+.spyTheme .start{
+background:#7f1d1d;
+color:white;
+box-shadow:0 0 20px rgba(239,68,68,.5);
+}
+
+.pass{
+color:#4ade80;
+font-weight:900;
+text-align:center;
+}
+
+@media(max-height:700px){
+#hold{width:180px;height:180px;}
+}

@@ -1,0 +1,406 @@
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+}
+
+body{
+background:
+radial-gradient(circle at top,#071a2a,#020617 60%),
+linear-gradient(180deg,#020617,#01030a);
+color:#e5e7eb;
+min-height:100vh;
+}
+
+/* CORE LAYOUT */
+
+.center{
+display:flex;
+flex-direction:column;
+align-items:center;
+padding:22px;
+max-width:430px;
+margin:auto;
+}
+
+/* TITLES */
+
+h1,h2{
+color:#6ee7b7;
+letter-spacing:3px;
+text-align:center;
+text-shadow:0 0 25px rgba(110,231,183,.5);
+margin:16px 0;
+}
+
+h1{font-size:28px;}
+h2{font-size:20px;}
+
+/* INPUTS / DROPDOWNS */
+
+input,select{
+width:100%;
+background:linear-gradient(180deg,#061322,#020b1a);
+border:1px solid #1f2933;
+padding:15px 16px;
+border-radius:18px;
+color:#e5e7eb;
+margin-bottom:12px;
+outline:none;
+appearance:none;
+box-shadow:
+inset 0 0 20px rgba(0,0,0,.7),
+0 10px 25px rgba(0,0,0,.5);
+}
+
+select option{
+background:#020b1a;
+color:#6ee7b7;
+}
+
+input::placeholder{color:#6b7280;}
+
+/* BUTTONS */
+
+button{
+border:none;
+border-radius:20px;
+padding:14px;
+font-weight:700;
+cursor:pointer;
+margin-top:10px;
+transition:.25s ease;
+}
+
+/* PRIMARY */
+
+.start{
+background:linear-gradient(135deg,#6ee7b7,#4ade80);
+color:#02150d;
+width:100%;
+font-size:16px;
+letter-spacing:1px;
+box-shadow:0 0 30px rgba(110,231,183,.45);
+}
+
+.start:active{transform:scale(.96);}
+
+/* ABORT */
+
+.abort{
+background:linear-gradient(135deg,#7f1d1d,#3f0d0d);
+color:#fecaca;
+width:100%;
+box-shadow:0 0 25px rgba(239,68,68,.45);
+}
+
+/* AGENT LIST */
+
+#agentList{
+width:100%;
+margin-top:10px;
+}
+
+#agentList li{
+background:linear-gradient(180deg,#061322,#020b1a);
+padding:14px;
+margin-bottom:10px;
+border-radius:18px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+border:1px solid #1f2933;
+box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+
+/* REMOVE */
+
+.remove{
+background:#3f0d0d;
+color:#fecaca;
+padding:6px 14px;
+border-radius:12px;
+opacity:.8;
+}
+
+/* HOLD REVEAL */
+
+#hold{
+width:220px;
+height:220px;
+border-radius:50%;
+border:2px solid #6ee7b7;
+display:flex;
+align-items:center;
+justify-content:center;
+margin:26px auto;
+color:#6ee7b7;
+font-weight:700;
+letter-spacing:2px;
+text-align:center;
+box-shadow:
+0 0 45px rgba(110,231,183,.45),
+inset 0 0 30px rgba(110,231,183,.15);
+}
+
+/* TURN */
+
+#turn{
+margin-top:10px;
+font-weight:700;
+letter-spacing:2px;
+color:#6ee7b7;
+text-align:center;
+}
+
+/* CARD */
+
+#card{
+margin:18px;
+text-align:center;
+font-size:22px;
+color:#6ee7b7;
+letter-spacing:1px;
+}
+
+/* SPY */
+
+.spy{
+color:#ef4444;
+font-weight:900;
+letter-spacing:2px;
+text-shadow:0 0 25px rgba(239,68,68,.6);
+}
+
+/* TIMER */
+
+#timer{
+font-size:46px;
+color:#6ee7b7;
+margin:10px;
+text-shadow:0 0 30px rgba(110,231,183,.6);
+}
+
+/* NEXT / TIMER */
+
+#nextBtn,#startTimerBtn{
+width:100%;
+background:linear-gradient(135deg,#6ee7b7,#4ade80);
+color:black;
+display:none;
+border-radius:20px;
+}
+
+/* DISCUSSION TEXT */
+
+.theme,.pass{
+color:#6ee7b7;
+font-weight:800;
+text-align:center;
+letter-spacing:1px;
+margin-top:6px;
+}
+
+/* VOTING AREA */
+
+#accuseArea{
+width:100%;
+margin-top:20px;
+display:flex;
+flex-direction:column;
+gap:12px;
+}
+
+/* CENTER CAST YOUR VOTE */
+
+#accuseArea h3{
+text-align:center;
+color:#6ee7b7;
+letter-spacing:2px;
+margin-bottom:8px;
+}
+
+/* VOTE ROW */
+
+.voteRow{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:linear-gradient(180deg,#061322,#020b1a);
+padding:14px;
+border-radius:18px;
+color:#6ee7b7;
+border:1px solid #1f2933;
+box-shadow:0 8px 25px rgba(0,0,0,.6);
+}
+
+/* VOTE BUTTON */
+
+.accuse{
+background:linear-gradient(135deg,#7f1d1d,#3f0d0d);
+color:white;
+padding:8px 18px;
+border-radius:14px;
+box-shadow:0 0 15px rgba(239,68,68,.5);
+}
+
+/* POPUP */
+
+.popup{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.85);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:100;
+}
+
+/* POPUP BOX */
+
+.popupBox{
+background:linear-gradient(180deg,#061322,#020b1a);
+padding:30px;
+border-radius:26px;
+text-align:center;
+width:85%;
+box-shadow:0 0 60px rgba(0,0,0,.8);
+}
+
+/* MEMBER WIN */
+
+.memberTheme{
+border:2px solid #6ee7b7;
+box-shadow:0 0 40px rgba(110,231,183,.6);
+}
+
+/* SPY WIN */
+
+.spyTheme{
+border:2px solid #ef4444;
+box-shadow:0 0 40px rgba(239,68,68,.7);
+}
+
+.spyTheme .start{
+background:#7f1d1d;
+color:white;
+box-shadow:0 0 25px rgba(239,68,68,.6);
+}
+/* ---- VISUAL HIERARCHY FIX ---- */
+
+/* Headline softer */
+#turn{
+color:#9ca3af;
+letter-spacing:2px;
+margin-bottom:14px;
+}
+
+/* HOLD CIRCLE – keep glow but soften text */
+#hold{
+color:#6ee7b7;
+font-size:14px;
+letter-spacing:3px;
+}
+
+/* TIMER stays hero */
+#timer{
+color:#6ee7b7;
+font-weight:800;
+margin-top:10px;
+margin-bottom:14px;
+}
+
+/* DISCUSSION TEXT → subtle helper */
+.theme{
+color:#9ca3af !important;
+font-weight:500;
+font-size:13px;
+max-width:320px;
+line-height:1.4;
+margin:14px auto 24px auto;
+}
+
+/* Start voting spacing */
+#startVoteBtn{
+margin-top:10px;
+}
+
+/* Reduce green saturation on headers */
+h1,h2{
+color:#9fe4c7;
+text-shadow:none;
+}
+
+/* END GAME less aggressive */
+.abort{
+opacity:.75;
+}
+
+/* Reduce crowding */
+.center > *{
+margin-bottom:8px;
+}
+
+/* PREMIUM GREEN — SAME STRUCTURE AS RED END GAME */
+
+.start,
+#nextBtn,
+#startTimerBtn{
+
+background:linear-gradient(135deg,#37c46b,#093b1d);
+color:#ecfdf5;
+
+width:100%;
+font-size:17px;
+letter-spacing:1.5px;
+font-weight:800;
+
+border-radius:20px;
+
+box-shadow:
+0 0 25px rgba(33, 180, 87, 0.45),
+inset 0 0 18px rgba(0,0,0,.35);
+
+transition:.25s ease;
+}
+
+.start:active,
+#nextBtn:active,
+#startTimerBtn:active{
+transform:scale(.96);
+box-shadow:
+inset 0 0 25px rgba(0,0,0,.6);
+}
+
+/* Voting title centered and calm */
+#accuseArea h3{
+font-size:15px;
+letter-spacing:2px;
+color:#77ae97;
+margin-bottom:14px;
+}
+
+/* HOLD area spacing */
+#hold{
+margin:34px auto;
+}
+/* DISABLED OPTION / SPY LOCK */
+
+select:disabled,
+option:disabled{
+  background:#020b1a !important;
+  color:#6b7280 !important;
+  opacity:.5;
+}
+
+.spyDisabled{
+  pointer-events:none;
+  opacity:.4;
+}
+
+/* MOBILE */
+
+@media(max-height:700px){
+#hold{width:180px;height:180px;}
+}

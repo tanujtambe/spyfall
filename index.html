@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="style.css">
+<title>Command Center</title>
+</head>
+
+<body class="center">
+
+<h1>COMMAND CENTER</h1>
+
+<input id="agentInput" placeholder="Agent Name">
+
+<button class="start" onclick="addAgent()">ADD AGENT</button>
+
+<ul id="agentList"></ul>
+
+<select id="spySelect">
+<option value="1">1 Spy</option>
+<option value="2">2 Spies</option>
+</select>
+
+<select id="timeSelect">
+<option value="300">5 Minutes</option>
+<option value="480" selected>8 Minutes</option>
+<option value="600">10 Minutes</option>
+</select>
+
+<button class="start" onclick="startMission()">START MISSION</button>
+
+<div id="popup" class="popup">
+ <div class="popupBox memberTheme" id="popupBox">
+  <h2 id="popupText"></h2>
+  <button class="start" onclick="closePopup()">OK</button>
+ </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
