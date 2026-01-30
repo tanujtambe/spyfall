@@ -167,7 +167,7 @@ letter-spacing:1px;
 /* SPY */
 
 .spy{
-color:#ef4444;
+color:#6ee7b7;
 font-weight:900;
 letter-spacing:2px;
 text-shadow:0 0 25px rgba(239,68,68,.6);
@@ -179,7 +179,7 @@ text-shadow:0 0 25px rgba(239,68,68,.6);
 font-size:46px;
 color:#6ee7b7;
 margin:10px;
-text-shadow:0 0 30px rgba(110,231,183,.6);
+text-shadow:0 0 30px rgba(69, 223, 153, 0.6);
 }
 
 /* NEXT / TIMER */
@@ -404,3 +404,4 @@ option:disabled{
 @media(max-height:700px){
 #hold{width:180px;height:180px;}
 }
+
