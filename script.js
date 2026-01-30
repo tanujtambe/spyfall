@@ -1,4 +1,4 @@
-let agents=[];
+let agents=[]
 let current=0;
 let timerStarted=false;
 let timerInterval;
@@ -11,49 +11,49 @@ let holdSeconds = 5;
 const isGame=location.pathname.includes("game");
 
 const locations={
-"Kashmir Houseboat":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
-"Amritsar Golden Temple":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
-"Delhi Street Market":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
-"Jaipur Palace":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
+"Houseboat":["Captain","Tourist","Cook","Guide","Photographer","Cleaner","Vendor","Guard"],
+"Golden Temple":["Priest","Volunteer","Devotee","Cook","Guard","Guide","Cleaner","Tourist"],
+"Street Market":["Seller","Shop Owner","Courier","Customer","Performer","Pickpocket","Police","Guide"],
+"Palace":["Guide","Guard","Historian","Caretaker","Tourist","Staff","Photographer","Attendant"],
 "Varanasi Ghats":["Priest","Boatman","Pilgrim","Flower Seller","Photographer","Ashram Worker","Local","Tourist"],
-"Mumbai Local Train":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
-"Goa Beach Shack":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
-"Bengaluru IT Park":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
+"Local Train":["TC","Office Worker","Student","Vendor","Guard","Commuter","Tourist","Cleaner"],
+"Beach Shack":["Bartender","DJ","Instructor","Vendor","Lifeguard","Tourist","Manager","Organizer"],
+"IT Park":["Developer","HR","Founder","Intern","Guard","PM","Analyst","Delivery"],
 "Kerala Backwaters":["Captain","Fisherman","Resort Staff","Traveler","Vendor","Farmer","Guide","Watcher"],
-"Hyderabad Biryani Hotel":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
+"Biryani Hotel":["Chef","Waiter","Customer","Manager","Cleaner","Delivery","Cashier","Guard"],
 "Kolkata Tram":["Driver","Passenger","TC","Vendor","Student","Tourist","Cleaner","Inspector"],
-"Puri Jagannath Temple":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
-"Chennai Marina Beach":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
+"Jagannath Temple":["Priest","Devotee","Volunteer","Guard","Guide","Cleaner","Vendor","Tourist"],
+"Marina Beach":["Vendor","Tourist","Fisherman","Guard","Photographer","Cleaner","Jogger","Rescuer"],
 "Madurai Temple":["Priest","Devotee","Guide","Guard","Cleaner","Vendor","Volunteer","Tourist"],
 "Assam Tea Estate":["Manager","Picker","Inspector","Exporter","Farmer","Operator","Guide","Warehouse"],
-"Nagpur Orange Market":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
-"Rajasthan Desert Camp":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
-"Patna Railway":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
-"Indore Sarafa Bazaar":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
-"Shillong View Point":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
-"Agra Taj Mahal":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
+"Orange Market":["Trader","Farmer","Buyer","Loader","Inspector","Driver","Cleaner","Guard"],
+"Desert Camp":["Guide","Camel Handler","Tourist","Cook","Guard","Photographer","Organizer","Cleaner"],
+"Railway":["Vendor","Porter","Driver","TC","Passenger","Manager","Cleaner","Police"],
+"Sarafa Bazaar":["Snack Seller","Customer","Cashier","Cook","Cleaner","Guard","Supplier","Tourist"],
+"View Point":["Guide","Tourist","Photographer","Vendor","Guard","Cleaner","Driver","Local"],
+"Taj Mahal":["Guide","Security","Photographer","Tourist","Cleaner","Vendor","Caretaker","Historian"],
 "Lucknow Imambara":["Guide","Volunteer","Devotee","Guard","Cleaner","Tourist","Vendor","Caretaker"],
 "Udaipur City Palace":["Guide","Boatman","Tourist","Guard","Cleaner","Vendor","Historian","Photographer"],
-"Bhopal Lakefront":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
-"Surat Textile Market":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
+"Lakefront":["Jogger","Photographer","Vendor","Cleaner","Guard","Tourist","Boat Operator","Local"],
+"Textile Market":["Trader","Buyer","Quality Checker","Loader","Cashier","Guard","Driver","Supervisor"],
 "Ahmedabad Sabarmati":["Guide","Tourist","Cleaner","Security","Vendor","Photographer","Volunteer","Local"],
 "Rajkot Workshop":["Mechanic","Supervisor","Intern","Quality Inspector","Driver","Cleaner","Store Manager","Guard"],
 "Coimbatore Factory":["Operator","Engineer","Supervisor","Intern","Cleaner","Security","Driver","Manager"],
 "Vizag Shipyard":["Engineer","Welder","Inspector","Captain","Dock Worker","Guard","Cleaner","Logistics"],
 "Ranchi Waterfall":["Guide","Tourist","Photographer","Vendor","Cleaner","Driver","Forest Guard","Local"],
-"Raipur Rice Mill":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
+"Rice Mill":["Operator","Supervisor","Loader","Quality Checker","Driver","Cleaner","Guard","Accountant"],
 "Guwahati Ferry":["Captain","Ticket Clerk","Passenger","Cleaner","Vendor","Security","Guide","Local"],
 "Imphal Handloom":["Weaver","Designer","Buyer","Supervisor","Cleaner","Security","Driver","Accountant"],
-"Aizawl Hill Cafe":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
-"Gangtok Ropeway":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
-"Darjeeling Toy Train":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
-"Dhanbad Coal Mine":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
-"Jamshedpur Steel Plant":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
-"Chandigarh Sector Market":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
+"Hill Cafe":["Barista","Tourist","Cleaner","Owner","Guide","Supplier","Photographer","Local"],
+"Ropeway":["Operator","Tourist","Guide","Cleaner","Technician","Security","Photographer","Local"],
+"Toy Train":["Driver","Ticket Clerk","Tourist","Guide","Cleaner","Vendor","Photographer","Inspector"],
+"Coal Mine":["Miner","Supervisor","Safety Officer","Engineer","Cleaner","Driver","Guard","Inspector"],
+"Steel Plant":["Operator","Engineer","Supervisor","Intern","Security","Cleaner","Driver","Manager"],
+"Sector Market":["Vendor","Customer","Security","Cleaner","Courier","Shop Owner","Tourist","Inspector"],
 "Shimla Ridge":["Guide","Tourist","Photographer","Vendor","Cleaner","Security","Driver","Local"],
-"Manali Snow Camp":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
-"Leh Army Camp":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
-"Jodhpur Blue City":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
+"Snow Camp":["Instructor","Tourist","Guide","Cook","Cleaner","Rescue Staff","Photographer","Driver"],
+"Army Camp":["Officer","Medic","Driver","Technician","Guard","Cook","Logistics","Engineer"],
+"Jodhpur City":["Guide","Tourist","Photographer","Vendor","Cleaner","Guard","Driver","Local"]
 };
 
 function randomIndexes(n,c){
@@ -393,6 +393,7 @@ document.getElementById("endGame").onclick = () => {
 document.getElementById("closePopup").onclick=()=>popup.style.display="none";
 
 }
+
 
 
 
