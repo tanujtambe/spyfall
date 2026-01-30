@@ -204,7 +204,7 @@ function reveal(){
 
   card.innerHTML = a.spy
     ? "<div class='spy'>YOU ARE THE SPY</div>"
-    : `${a.location}<br>${a.role}`;
+    : `Location:${a.location}<br>Role:${a.role}`;
 
   // ONLY NOW allow next action
   if(current === agents.length - 1){
@@ -393,3 +393,4 @@ document.getElementById("endGame").onclick = () => {
 document.getElementById("closePopup").onclick=()=>popup.style.display="none";
 
 }
+
